@@ -15,4 +15,3 @@ Get-ChildItem (Join-Path $repoRoot 'tests') -Filter 'Test-*.ps1' | Sort-Object N
     if($LASTEXITCODE -ne 0){throw "Test failed: $($_.Name)"}
 }
 Write-Output "PASS: parsed $($parseTargets.Count) PowerShell files and completed all tests"
-
