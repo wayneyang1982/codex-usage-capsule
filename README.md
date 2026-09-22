@@ -95,7 +95,8 @@ See [SECURITY.md](SECURITY.md) for the trust boundary.
 - System follows Windows appearance, not Codex's internal theme preference.
 - Click the capsule to open or close it; click elsewhere or press Esc to close.
 - While details are open, a local mouse-down watcher checks whether a click is outside the capsule and panel. It stops when the panel closes; it does not log coordinates, block clicks, or inject into other apps.
-- The widget is visible only while an eligible Codex Desktop window is foreground.
+- The capsule appears only while an eligible Codex Desktop window is in the foreground. It reappears automatically when you return to Codex.
+- This is intentional: the capsule is a separate topmost window, not a native Codex title-bar control. Hiding it when Codex loses focus keeps it from floating over unrelated apps. If Codex is still visible beside another app but is not focused, the capsule stays hidden until Codex becomes active again.
 - `Start at sign-in` enables or disables the existing scheduled task. Turning it off does not close the current widget. Its checkbox is read at capsule startup and updated after changes made in the panel; external Task Scheduler edits require a capsule restart to appear.
 
 ## Development
