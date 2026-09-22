@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- Close the details panel reliably on outside clicks without activating or intercepting other apps.
+- Open details without a synchronous Task Scheduler query; cache the sign-in setting at startup.
+
 ## 0.1.1 - 2026-09-22
 
 - Keep the capsule anchored during roomy window resizes; revalidate near narrow layouts and DPI transitions.

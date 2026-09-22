@@ -77,7 +77,7 @@ The widget launches your installed Codex CLI and uses its local [App Server](htt
 - No credentials are read, copied, logged, or uploaded.
 - No reset credit is consumed.
 - No Codex configuration or installation file is changed.
-- `%LOCALAPPDATA%\CodexUsageCapsule\status.json` contains only local process state, the displayed quota text, timestamps, layout bounds, and the most recent App Server error.
+- `%LOCALAPPDATA%\CodexUsageCapsule\status.json` contains only local process state, the displayed quota text, timestamps, layout bounds, and App Server/UI error text.
 
 See [SECURITY.md](SECURITY.md) for the trust boundary.
 
@@ -86,8 +86,9 @@ See [SECURITY.md](SECURITY.md) for the trust boundary.
 - Light, Dark, or System appearance; the choice is stored locally.
 - System follows Windows appearance, not Codex's internal theme preference.
 - Click the capsule to open or close it; click elsewhere or press Esc to close.
+- While details are open, a local mouse-down watcher checks whether a click is outside the capsule and panel. It stops when the panel closes; it does not log coordinates, block clicks, or inject into other apps.
 - The widget is visible only while an eligible Codex Desktop window is foreground.
-- `Start at sign-in` enables or disables the existing scheduled task. Turning it off does not close the current widget.
+- `Start at sign-in` enables or disables the existing scheduled task. Turning it off does not close the current widget. Its checkbox is read at capsule startup and updated after changes made in the panel; external Task Scheduler edits require a capsule restart to appear.
 
 ## Development
 

@@ -6,6 +6,8 @@ Codex Usage Capsule is a local current-user process. It launches a separately in
 
 It must not read credential files, request API keys, modify Codex files, consume reset credits, inject code into Codex, or send telemetry.
 
+Only while the details panel is open, a low-level mouse hook observes button-down coordinates to dismiss outside clicks. The callback stays in the capsule process, never blocks the click, and neither records coordinates nor sends them anywhere. The hook is removed when the panel closes.
+
 The installer writes only to its selected install directory, a `CodexUsageCapsule` current-user scheduled task, and `%LOCALAPPDATA%\CodexUsageCapsule`. The uninstaller requires a matching installation marker before deleting the install directory and validates task ownership before unregistering it.
 
 ## Reporting a vulnerability
