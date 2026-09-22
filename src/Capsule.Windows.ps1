@@ -213,7 +213,7 @@ $timer.add_Tick({
         $script:serverError=''
         $codex=Find-CodexAppServerLaunchSpec
         $script:reader.Start($codex.Executable,(Get-CodexAppServerArguments $codex))
-        Send-AppServer @{method='initialize';id=0;params=@{clientInfo=@{name='codex_usage_capsule';title='Codex Usage Capsule';version='0.1.0'}}}
+        Send-AppServer @{method='initialize';id=0;params=@{clientInfo=@{name='codex_usage_capsule';title='Codex Usage Capsule';version='0.1.1'}}}
     }
     $output=$null
     while($script:reader.Read([ref]$output)) {

@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.1.1 - 2026-09-22
 
 - Keep the capsule anchored during roomy window resizes; revalidate near narrow layouts and DPI transitions.
 
