@@ -6,6 +6,12 @@ Codex Usage Capsule sits beside **Help** in Codex Desktop. The collapsed capsule
 
 > Community project. Not affiliated with or endorsed by OpenAI.
 
+## What's new in v0.2.0
+
+- The details panel opens promptly and closes when you click outside it, including Codex content or the desktop.
+- A quick reopen is not closed by a delayed click from the previous panel session.
+- The outside-click watcher runs only while the panel is open. It does not record clicks or inject into Codex.
+
 ## What it shows
 
 - One quota window: `7d 61% | 57%`
@@ -39,6 +45,8 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\Install.ps1
 ```
 
 The installer copies the runtime to `%LOCALAPPDATA%\Programs\CodexUsageCapsule`, registers a current-user scheduled task named `CodexUsageCapsule`, waits one minute after Windows sign-in, and starts without a visible terminal. It does not modify Codex program files.
+
+To upgrade an existing clone, run `git pull --ff-only` and rerun the install command above. The installer restarts the capsule and enables hidden sign-in startup; if you had turned startup off, turn it off again in the details panel after upgrading.
 
 Check the installation:
 
