@@ -247,16 +247,18 @@ $timer.add_Tick({
     if($hostHandle -eq [IntPtr]::Zero -or [CapsuleNative]::IsIconic($hostHandle) -or ![CapsuleNative]::IsWindowVisible($hostHandle)){Hide-Capsule 'host-hidden';return}
     $rect=New-Object CapsuleNative+RECT
     if(![CapsuleNative]::GetWindowRect($hostHandle,[ref]$rect)){Hide-Capsule 'host-unavailable';return}
-    [PaceMenuAnchor]::Request($hostHandle);$anchor=[PaceMenuAnchor]::Read($hostHandle)
-    if($null -eq $anchor -or ([DateTime]::UtcNow-$anchor.Captured).TotalSeconds -gt 3 -or $anchor.Host.Left -ne $rect.Left -or $anchor.Host.Top -ne $rect.Top -or $anchor.Host.Right -ne $rect.Right -or $anchor.Host.Bottom -ne $rect.Bottom){Hide-Capsule 'waiting-menu-anchor';return}
-    $scale=[Math]::Max(96,[CapsuleNative]::GetDpiForWindow($hostHandle))/96.0
+    $dpi=[uint32][Math]::Max(96,[CapsuleNative]::GetDpiForWindow($hostHandle))
+    $scale=$dpi/96.0
+    [PaceMenuAnchor]::Request($hostHandle)
+    $anchor=[PaceMenuAnchor]::Read($hostHandle,$rect.Left,$rect.Top,$rect.Right,$rect.Bottom,$dpi)
+    if($null -eq $anchor){Hide-Capsule 'waiting-menu-anchor';return}
     $x=[int][Math]::Ceiling($anchor.Right+10*$scale)
     $available=($rect.Right-$x)/$scale-150
     $fit=Set-CapsuleFit -Border $border -Text $text -Arrow $arrow -FullText $script:model.Text -Available $available
     $border.ToolTip=$script:model.Text + '  (used | time elapsed)'
     if($fit -eq 'unavailable'){Hide-Capsule 'insufficient-titlebar-space';return}
     $w=[int][Math]::Ceiling($border.DesiredSize.Width*$scale);$h=[int][Math]::Ceiling($border.DesiredSize.Height*$scale);$y=[int][Math]::Round($anchor.CenterY-$h/2)
-    $script:bounds=@{x=$x;y=$y;width=$w;height=$h;mode=$fit;availableDip=$available}
+    $script:bounds=@{x=$x;y=$y;width=$w;height=$h;mode=$fit;availableDip=$available;anchorMode=$(if($anchor.Translated){'translated'}else{'verified'})}
     $popup.HorizontalOffset=[Math]::Min(0,($rect.Right-$x)/$scale-300)
     [void][CapsuleNative]::SetWindowPos($widgetHandle,[IntPtr](-1),$x,$y,$w,$h,0x10)
     if(!$window.IsVisible){$window.Show()}
