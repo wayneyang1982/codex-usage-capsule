@@ -102,7 +102,7 @@ The default CI suite does not require Codex Desktop or Codex CLI. `-RequireInsta
 ## Known limitations
 
 - Windows Desktop only; no macOS implementation yet.
-- Title-bar anchoring depends on Windows UI Automation. Common Help-menu translations are recognized, with a bounded top-row fallback for other locales. During a pure window move, a recent verified anchor follows the window for up to 30 seconds; resizing or changing display DPI waits for a fresh anchor, so the capsule may briefly disappear.
+- Title-bar anchoring depends on Windows UI Automation. Common Help-menu translations are recognized, with a bounded top-row fallback for other locales. A recent verified anchor follows window moves and roomy resizes for up to 30 seconds. Near a narrow layout or after a display DPI change, the capsule waits for fresh positioning and may briefly disappear rather than cover title-bar controls.
 - Codex Desktop UI or App Server changes may require a compatibility update.
 - The widget is an external no-activation WPF window visually attached to Codex; it is not an injected or native Codex control.
 

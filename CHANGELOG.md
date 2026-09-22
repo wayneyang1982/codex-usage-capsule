@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.1 - 2026-09-22
+
+- Keep the capsule anchored during roomy window resizes; revalidate near narrow layouts and DPI transitions.
+
 ## 0.1.0 - 2026-09-22
 
 - Initial Windows MVP.
