@@ -20,6 +20,7 @@ $script:nextStart=[DateTimeOffset]::MinValue
 $script:serverInitialized=$false
 $script:requestId=10
 $script:serverError=''
+$script:outsideHookError=''
 $script:hostHandle=[IntPtr]::Zero
 $script:forceExit=$false
 $script:lastVisual=''
@@ -37,6 +38,10 @@ try {
 } catch {}
 $script:themeKey=''
 $script:nextThemeCheck=[DateTimeOffset]::MinValue
+$script:startupEnabled=$null
+$script:startupError=''
+try {$script:startupEnabled=[bool](Get-CapsuleStartupEnabled)}
+catch {$script:startupError=$_.Exception.Message}
 function Get-CapsuleLight {
     if($script:themeMode -ne 'System'){return $script:themeMode -eq 'Light'}
     try { return (Get-ItemProperty 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Themes\Personalize' -Name AppsUseLightTheme).AppsUseLightTheme -eq 1 } catch {return $true}
@@ -56,7 +61,7 @@ function Write-Status([string]$state) {
     # Runtime status only; no account identifiers, tokens, or credentials.
     $folder=Split-Path $script:diagnostic
     [void][IO.Directory]::CreateDirectory($folder)
-    [IO.File]::WriteAllText($script:diagnostic, (@{pid=$PID;state=$state;text=$script:model.Text;rows=$script:model.Rows.Count;updated=[DateTimeOffset]::UtcNow.ToString('o');bounds=$script:bounds;appServerPid=$script:reader.ProcessId;lastError=$script:serverError} | ConvertTo-Json -Depth 4))
+    [IO.File]::WriteAllText($script:diagnostic, (@{pid=$PID;state=$state;text=$script:model.Text;rows=$script:model.Rows.Count;updated=[DateTimeOffset]::UtcNow.ToString('o');bounds=$script:bounds;appServerPid=$script:reader.ProcessId;lastError=$script:serverError;outsideClickError=$script:outsideHookError} | ConvertTo-Json -Depth 4))
 }
 function Brush([string]$color) { [System.Windows.Media.BrushConverter]::new().ConvertFromString($color) }
 function Label([string]$value,[double]$size=12,[string]$color='#EDEDEF') {
@@ -83,7 +88,8 @@ $window.Show();$widgetHandle=[System.Windows.Interop.WindowInteropHelper]::new($
 $style=[CapsuleNative]::GetWindowLongPtr($widgetHandle,-20).ToInt64() -bor 0x80 -bor 0x08000000
 [void][CapsuleNative]::SetWindowLongPtr($widgetHandle,-20,[IntPtr]$style)
 $window.Hide()
-# WPF Popup handles outside-click dismissal; only the capsule itself intercepts clicks.
+# WPF's outside-click capture is a fallback; the no-activate capsule also uses
+# a mouse-down watcher only while details are open.
 $popup=New-Object System.Windows.Controls.Primitives.Popup
 $popup.PlacementTarget=$border;$popup.Placement='Bottom';$popup.VerticalOffset=8;$popup.StaysOpen=$false;$popup.AllowsTransparency=$true
 $panelBorder=New-Object System.Windows.Controls.Border
@@ -92,6 +98,17 @@ $panelBorder.BorderThickness=[System.Windows.Thickness]::new(1)
 $stack=New-Object System.Windows.Controls.StackPanel;$panelBorder.Child=$stack;$popup.Child=$panelBorder
 $panelBorder.Focusable=$true
 $panelBorder.add_PreviewKeyDown({if ($_.Key -eq [System.Windows.Input.Key]::Escape) {$popup.IsOpen=$false;$_.Handled=$true}})
+$script:outsideClick=New-Object CapsuleOutsideClick
+$script:widgetSource=[System.Windows.Interop.HwndSource]::FromHwnd($widgetHandle)
+$script:outsideMessageHook=[System.Windows.Interop.HwndSourceHook]{
+    param($hwnd,$msg,$wParam,$lParam,[ref]$handled)
+    if($msg -eq [CapsuleOutsideClick]::OutsideMessage){
+        if($popup.IsOpen -and $wParam.ToInt64() -eq $script:outsideClick.Generation){$popup.IsOpen=$false}
+        $handled=$true
+    }
+    return [IntPtr]::Zero
+}
+$script:widgetSource.AddHook($script:outsideMessageHook)
 function Build-Details {
     $stack.Children.Clear()
     $light=Get-CapsuleLight
@@ -150,13 +167,14 @@ function Build-Details {
     $startup.Content='Start at sign-in';$startup.FontSize=11;$startup.Foreground=Brush $fg
     $startup.Margin=[System.Windows.Thickness]::new(0,16,0,0)
     $startup.ToolTip='Start silently one minute after Windows sign-in. Turning this off does not exit the current capsule.'
-    try{$startup.IsChecked=Get-CapsuleStartupEnabled;$startup.Tag=[bool]$startup.IsChecked}
-    catch{$startup.IsEnabled=$false;$startup.ToolTip='Startup task unavailable: '+$_.Exception.Message}
+    if($null -ne $script:startupEnabled){$startup.IsChecked=$script:startupEnabled;$startup.Tag=$script:startupEnabled}
+    else{$startup.IsEnabled=$false;$startup.ToolTip='Startup task unavailable: '+$script:startupError}
     $startup.add_Click({
         param($sender,$eventArgs)
         try{
             $sender.IsEnabled=$false
             $confirmed=Set-CapsuleStartupEnabled -Enabled ([bool]$sender.IsChecked)
+            $script:startupEnabled=$confirmed
             $sender.IsChecked=$confirmed;$sender.Tag=$confirmed
         }catch{
             $sender.IsChecked=[bool]$sender.Tag
@@ -171,8 +189,19 @@ Set-CapsuleTheme
 # that release without reopening, but allow a new press immediately.
 $script:closedPressStamp=$null
 $script:suppressTriggerRelease=$false
-$popup.add_Opened({$arrow.Text=[string][char]0x25B4})
+$popup.add_Opened({
+    $arrow.Text=[string][char]0x25B4
+    $script:outsideHookError=''
+    try {
+        $panelSource=[System.Windows.PresentationSource]::FromVisual($panelBorder)
+        if($panelSource -isnot [System.Windows.Interop.HwndSource]){throw 'Popup window handle unavailable'}
+        if(!$script:outsideClick.Start($widgetHandle,$panelSource.Handle)){
+            throw "Mouse watcher unavailable (Win32 $($script:outsideClick.LastError))"
+        }
+    } catch {$script:outsideHookError=$_.Exception.Message}
+})
 $popup.add_Closed({
+    $script:outsideClick.Stop()
     $arrow.Text=[string][char]0x25BE
     if([System.Windows.Input.Mouse]::LeftButton -eq [System.Windows.Input.MouseButtonState]::Pressed){
         $script:closedPressStamp=[CapsuleNative]::GetMessageTime()
@@ -213,7 +242,7 @@ $timer.add_Tick({
         $script:serverError=''
         $codex=Find-CodexAppServerLaunchSpec
         $script:reader.Start($codex.Executable,(Get-CodexAppServerArguments $codex))
-        Send-AppServer @{method='initialize';id=0;params=@{clientInfo=@{name='codex_usage_capsule';title='Codex Usage Capsule';version='0.1.1'}}}
+        Send-AppServer @{method='initialize';id=0;params=@{clientInfo=@{name='codex_usage_capsule';title='Codex Usage Capsule';version='0.2.0'}}}
     }
     $output=$null
     while($script:reader.Read([ref]$output)) {
@@ -267,6 +296,6 @@ $timer.add_Tick({
  } catch {Hide-Capsule ('error: '+$_.Exception.Message)}
  finally {if($SmokeTest -and ([DateTimeOffset]::UtcNow-$script:startTime).TotalSeconds -gt 12){Build-Details;Write-Status 'smoke-complete';$window.Close()}}
 })
-$window.add_Closed({$timer.Stop();$popup.IsOpen=$false;$script:reader.Dispose();try{$mutex.ReleaseMutex()}catch{};$mutex.Dispose();[System.Windows.Threading.Dispatcher]::CurrentDispatcher.BeginInvokeShutdown([System.Windows.Threading.DispatcherPriority]::Normal)})
+$window.add_Closed({$timer.Stop();$popup.IsOpen=$false;$script:outsideClick.Dispose();$script:widgetSource.RemoveHook($script:outsideMessageHook);$script:reader.Dispose();try{$mutex.ReleaseMutex()}catch{};$mutex.Dispose();[System.Windows.Threading.Dispatcher]::CurrentDispatcher.BeginInvokeShutdown([System.Windows.Threading.DispatcherPriority]::Normal)})
 $timer.Start()
 [void][System.Windows.Threading.Dispatcher]::Run()

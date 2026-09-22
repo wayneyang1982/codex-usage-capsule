@@ -6,6 +6,12 @@ Codex Usage Capsule sits beside **Help** in Codex Desktop. The collapsed capsule
 
 > Community project. Not affiliated with or endorsed by OpenAI.
 
+## What's new in v0.2.0
+
+- The details panel opens promptly and closes when you click outside it, including Codex content or the desktop.
+- A quick reopen is not closed by a delayed click from the previous panel session.
+- The outside-click watcher runs only while the panel is open. It does not record clicks or inject into Codex.
+
 ## What it shows
 
 - One quota window: `7d 61% | 57%`
@@ -39,6 +45,8 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\Install.ps1
 ```
 
 The installer copies the runtime to `%LOCALAPPDATA%\Programs\CodexUsageCapsule`, registers a current-user scheduled task named `CodexUsageCapsule`, waits one minute after Windows sign-in, and starts without a visible terminal. It does not modify Codex program files.
+
+To upgrade an existing clone, run `git pull --ff-only` and rerun the install command above. The installer restarts the capsule and enables hidden sign-in startup; if you had turned startup off, turn it off again in the details panel after upgrading.
 
 Check the installation:
 
@@ -77,7 +85,7 @@ The widget launches your installed Codex CLI and uses its local [App Server](htt
 - No credentials are read, copied, logged, or uploaded.
 - No reset credit is consumed.
 - No Codex configuration or installation file is changed.
-- `%LOCALAPPDATA%\CodexUsageCapsule\status.json` contains only local process state, the displayed quota text, timestamps, layout bounds, and the most recent App Server error.
+- `%LOCALAPPDATA%\CodexUsageCapsule\status.json` contains only local process state, the displayed quota text, timestamps, layout bounds, and App Server/UI error text.
 
 See [SECURITY.md](SECURITY.md) for the trust boundary.
 
@@ -86,8 +94,9 @@ See [SECURITY.md](SECURITY.md) for the trust boundary.
 - Light, Dark, or System appearance; the choice is stored locally.
 - System follows Windows appearance, not Codex's internal theme preference.
 - Click the capsule to open or close it; click elsewhere or press Esc to close.
+- While details are open, a local mouse-down watcher checks whether a click is outside the capsule and panel. It stops when the panel closes; it does not log coordinates, block clicks, or inject into other apps.
 - The widget is visible only while an eligible Codex Desktop window is foreground.
-- `Start at sign-in` enables or disables the existing scheduled task. Turning it off does not close the current widget.
+- `Start at sign-in` enables or disables the existing scheduled task. Turning it off does not close the current widget. Its checkbox is read at capsule startup and updated after changes made in the panel; external Task Scheduler edits require a capsule restart to appear.
 
 ## Development
 
