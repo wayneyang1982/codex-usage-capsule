@@ -14,7 +14,7 @@ public static class PaceMenuAnchor {
         public double Right, CenterY;
         public uint Dpi;
         public DateTime Captured;
-        public bool Translated;
+        public bool Projected;
     }
     [DllImport("user32.dll")] static extern bool GetWindowRect(IntPtr h, out Rect r);
     [DllImport("user32.dll")] static extern uint GetDpiForWindow(IntPtr h);
@@ -22,21 +22,28 @@ public static class PaceMenuAnchor {
     static Snapshot latest;
     static int busy;
     static DateTime next = DateTime.MinValue;
-    // A window translation does not change the Help menu's position relative
-    // to the title bar. Project a recent verified anchor while the host moves;
-    // never project it across a resize or DPI transition.
+    // The title-bar menu is left-anchored. A recent verified Help position may
+    // follow moves and roomy resizes while UIA catches up. Near the caption
+    // controls or a responsive layout breakpoint, wait for fresh UIA instead.
     public static Snapshot Project(Snapshot anchor, Rect host, uint dpi, DateTime now) {
         if (anchor == null || (now - anchor.Captured).TotalSeconds > 30 ||
-            (now - anchor.Captured).TotalSeconds < -1 || anchor.Dpi != dpi ||
-            anchor.Host.Right - anchor.Host.Left != host.Right - host.Left ||
-            anchor.Host.Bottom - anchor.Host.Top != host.Bottom - host.Top) return null;
+            (now - anchor.Captured).TotalSeconds < -1 || anchor.Dpi != dpi) return null;
+        bool changed = anchor.Host.Left != host.Left || anchor.Host.Top != host.Top ||
+            anchor.Host.Right != host.Right || anchor.Host.Bottom != host.Bottom;
+        bool resized = anchor.Host.Right - anchor.Host.Left != host.Right - host.Left ||
+            anchor.Host.Bottom - anchor.Host.Top != host.Bottom - host.Top;
+        if (resized) {
+            double minWidth = anchor.Right - anchor.Host.Left + 220.0 * dpi / 96.0;
+            if (anchor.Host.Right - anchor.Host.Left < minWidth ||
+                host.Right - host.Left < minWidth) return null;
+        }
         double right = anchor.Right + host.Left - anchor.Host.Left;
         double centerY = anchor.CenterY + host.Top - anchor.Host.Top;
         if (right <= host.Left || right >= host.Right ||
             centerY <= host.Top || centerY >= host.Top + 120.0 * Math.Max(96u, dpi) / 96.0) return null;
         return new Snapshot { Handle = anchor.Handle, Host = host, Right = right,
             CenterY = centerY, Dpi = dpi, Captured = anchor.Captured,
-            Translated = host.Left != anchor.Host.Left || host.Top != anchor.Host.Top };
+            Projected = changed };
     }
     public static Snapshot Read(IntPtr handle, int left, int top, int right, int bottom, uint dpi) {
         Snapshot anchor;
@@ -87,7 +94,8 @@ public static class PaceMenuAnchor {
                     before.Right != after.Right || before.Bottom != after.Bottom ||
                     beforeDpi != afterDpi) return;
                 if (bounds.IsEmpty || bounds.Width <= 0 || bounds.Top < after.Top ||
-                    bounds.Bottom > after.Top + 120.0 * afterDpi / 96.0 || bounds.Right > after.Right) return;
+                    bounds.Bottom > after.Top + 120.0 * afterDpi / 96.0 ||
+                    bounds.Right >= after.Right - 150.0 * afterDpi / 96.0) return;
                 result = new Snapshot { Handle = handle, Host = after, Right = bounds.Right,
                     CenterY = bounds.Top + bounds.Height / 2, Dpi = afterDpi,
                     Captured = DateTime.UtcNow };

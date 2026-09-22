@@ -258,7 +258,7 @@ $timer.add_Tick({
     $border.ToolTip=$script:model.Text + '  (used | time elapsed)'
     if($fit -eq 'unavailable'){Hide-Capsule 'insufficient-titlebar-space';return}
     $w=[int][Math]::Ceiling($border.DesiredSize.Width*$scale);$h=[int][Math]::Ceiling($border.DesiredSize.Height*$scale);$y=[int][Math]::Round($anchor.CenterY-$h/2)
-    $script:bounds=@{x=$x;y=$y;width=$w;height=$h;mode=$fit;availableDip=$available;anchorMode=$(if($anchor.Translated){'translated'}else{'verified'})}
+    $script:bounds=@{x=$x;y=$y;width=$w;height=$h;mode=$fit;availableDip=$available;anchorMode=$(if($anchor.Projected){'projected'}else{'verified'})}
     $popup.HorizontalOffset=[Math]::Min(0,($rect.Right-$x)/$scale-300)
     [void][CapsuleNative]::SetWindowPos($widgetHandle,[IntPtr](-1),$x,$y,$w,$h,0x10)
     if(!$window.IsVisible){$window.Show()}
